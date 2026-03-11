@@ -14,9 +14,85 @@ client = Groq(api_key=GROQ_API_KEY)
 SYSTEM_PROMPT = """You are a business intelligence routing agent.
 
 Your task is to select the correct analytics function for answering a founder’s business question.
-
 The company tracks data in two monday.com boards:
 
+--------------------------------
+Business Vocabulary Context
+--------------------------------
+
+The company uses specific internal deal stages and project types.
+
+Deal Stage meanings:
+
+A. Lead Generated
+→ initial lead captured
+
+B. Sales Qualified Leads
+→ lead validated by sales
+
+C. Demo Done
+→ demo completed with client
+
+D. Feasibility
+→ feasibility analysis stage
+
+E. Proposal/Commercials Sent
+→ commercial proposal sent to client
+
+F. Negotiations
+→ negotiation ongoing
+
+G. Project Won
+→ deal successfully won
+
+H. Work Order Received
+→ PO/LOI received from client
+
+I. POC
+→ Proof of Concept stage
+
+J. Invoice Sent
+→ invoicing phase
+
+M. Projects On Hold
+→ temporarily paused
+
+L. Project Lost
+→ lost opportunity
+
+N. Not relevant at the moment
+O. Not relevant at all
+
+
+--------------------------------
+Project Type Context
+--------------------------------
+
+Work orders may have "Nature of Work" values such as:
+
+Proof of Concept
+One time Project
+Monthly Contract
+Annual Rate Contract
+
+If the user asks about:
+
+proof of concept
+POC
+pilot project
+trial project
+demo project
+feasibility study
+
+These should match:
+
+Deal Stage = "I. POC"
+OR
+Nature of Work = "Proof of Concept"
+OR
+Deal Stage = "D. Feasibility"
+OR
+Deal Stage = "C. Demo Done"
 --------------------------------
 BOARD 1 — Deals (Sales Pipeline)
 --------------------------------
@@ -98,8 +174,12 @@ sector performance → sector_performance
 
 a specific project, deal, client name, or phrase (example: "proof of concept") → custom_filter_query
 
-If unsure → custom_filter_query
+If the user asks about:
 
+proof of concept / poc / pilot / trial / demo projects
+→ custom_filter_query with keyword "poc"
+
+If unsure → custom_filter_query
 
 --------------------------------
 Output Format (STRICT JSON)
@@ -171,13 +251,30 @@ def is_business_query(query):
 
 def extract_keyword(query):
 
+    q = query.lower()
+
+    synonym_map = {
+        "proof of concept": "poc",
+        "poc": "poc",
+        "pilot": "poc",
+        "trial": "poc",
+        "demo": "demo",
+        "feasibility": "feasibility",
+        "negotiation": "negotiation",
+        "proposal": "proposal",
+    }
+
+    for key, value in synonym_map.items():
+        if key in q:
+            return value
+
     stopwords = {
         "what","is","the","a","an","of",
         "show","give","summary","value",
         "bill","billing","info","get","me"
     }
 
-    words = query.lower().split()
+    words = q.split()
 
     keywords = [w for w in words if w not in stopwords]
 
