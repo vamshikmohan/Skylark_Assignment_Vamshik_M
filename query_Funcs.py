@@ -77,6 +77,8 @@ sector_performance
 custom_filter_query  
 → keyword search across deals and workorders when a specific project, client, or phrase is mentioned
 
+deal_lookup
+→ If the user mentions a specific deal name (Naruto, Sakura, etc)
 
 --------------------------------
 Routing Rules
@@ -117,7 +119,20 @@ Return ONLY JSON.
 # Utility Functions
 # -----------------------------
 
+def normalize_columns(df):
 
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(" ", "_")
+        .str.replace("(", "")
+        .str.replace(")", "")
+        .str.replace(".", "")
+    )
+
+    return df
+ 
 def safe_json_parse(text):
     """
     Extract JSON safely even if the model returns extra text
@@ -232,6 +247,95 @@ def sector_performance(deals, trace):
         .sort_values("pipeline_value", ascending=False)
     )
 
+def deal_status_summary(deals, trace):
+
+    trace.append("Computing deal status summary")
+
+    return (
+        deals
+        .groupby("deal_status")
+        .agg(
+            deals_count=("deal_name", "count"),
+            pipeline_value=("masked_deal_value", "sum")
+        )
+        .sort_values("pipeline_value", ascending=False)
+    )
+
+
+def closing_soon_pipeline(deals, trace, days=30):
+
+    trace.append("Finding deals closing soon")
+
+    deals["tentative_close_date"] = pd.to_datetime(
+        deals["tentative_close_date"], errors="coerce"
+    )
+
+    today = pd.Timestamp.today()
+
+    upcoming = deals[
+        (deals["tentative_close_date"] >= today) &
+        (deals["tentative_close_date"] <= today + pd.Timedelta(days=days))
+    ]
+
+    return upcoming[
+        ["deal_name", "client_code", "masked_deal_value", "tentative_close_date"]
+    ].sort_values("tentative_close_date")
+
+
+def billing_vs_collection(workorders, trace):
+
+    trace.append("Computing billing vs collection")
+
+    billed = workorders["billed_value_in_rupees_excl_of_gst_masked"].sum()
+    collected = workorders["collected_amount_in_rupees_incl_of_gst_masked"].sum()
+
+    return {
+        "total_billed": billed,
+        "total_collected": collected,
+        "collection_efficiency": collected / billed if billed else 0
+    }
+
+
+def receivables_analysis(workorders, trace):
+
+    trace.append("Analyzing outstanding receivables")
+
+    if "amount_receivable_masked" not in workorders.columns:
+        return "Receivable column not found."
+
+    return (
+        workorders
+        .sort_values("amount_receivable_masked", ascending=False)
+        [["deal_name_masked", "amount_receivable_masked"]]
+        .head(10)
+    )
+
+
+def execution_status_summary(workorders, trace):
+
+    trace.append("Computing execution status summary")
+
+    return (
+        workorders
+        .groupby("execution_status")
+        .size()
+        .sort_values(ascending=False)
+    )
+
+
+def owner_performance(deals, trace):
+
+    trace.append("Computing owner performance")
+
+    return (
+        deals
+        .groupby("owner_code")
+        .agg(
+            deals_count=("deal_name", "count"),
+            pipeline_value=("masked_deal_value", "sum")
+        )
+        .sort_values("pipeline_value", ascending=False)
+    )
 
 def custom_filter_query(deals, workorders, trace, keyword=None):
 
@@ -259,6 +363,25 @@ def custom_filter_query(deals, workorders, trace, keyword=None):
         "matching_workorders": work_match.head(10)
     }
 
+def deal_lookup(deals, workorders, trace, keyword):
+
+    trace.append(f"Looking up records for: {keyword}")
+
+    keyword = keyword.lower()
+
+    deals_match = deals[
+        deals["deal_name"].astype(str).str.lower().str.contains(keyword)
+    ]
+
+    work_match = workorders[
+        workorders["deal_name"].astype(str).str.lower().str.contains(keyword)
+    ]
+
+    return {
+        "deal_records": deals_match,
+        "workorder_records": work_match
+    }
+
 # -----------------------------
 # FUNCTION REGISTRY
 # -----------------------------
@@ -268,13 +391,23 @@ FUNCTION_REGISTRY = {
     "expected_pipeline": expected_pipeline,
     "top_deals": top_deals,
     "sector_performance": sector_performance,
-    "custom_filter_query": custom_filter_query
+    "custom_filter_query": custom_filter_query,
+    "deal_lookup": deal_lookup,
+
+    # NEW
+    "deal_status_summary": deal_status_summary,
+    "closing_soon_pipeline": closing_soon_pipeline,
+    "owner_performance": owner_performance
 }
 
 WORKORDER_FUNCTIONS = {
-    "executed_revenue": executed_revenue
-}
+    "executed_revenue": executed_revenue,
 
+    # NEW
+    "billing_vs_collection": billing_vs_collection,
+    "execution_status_summary": execution_status_summary,
+    "receivables_analysis": receivables_analysis
+}
 
 # -----------------------------
 # LLM INFERENCE
@@ -335,7 +468,9 @@ Explain this result in a short executive summary.
 
 
 def handle_query(query, deals, workorders):
-
+    deals = normalize_columns(deals)
+    workorders = normalize_columns(workorders)
+ 
     trace = []
 
     trace.append("Received user query")
