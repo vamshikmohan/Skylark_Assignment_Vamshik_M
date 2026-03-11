@@ -214,3 +214,15 @@ if query:
 
         for step in trace:
             st.write("•", step)
+
+    st.markdown(
+    """
+    ### Source Data
+    
+    Deals Board  
+    https://vamshikmohans-team.monday.com/boards/5027136242
+    
+    Work Orders Board  
+    https://vamshikmohans-team.monday.com/boards/5027136341
+    """
+    )
