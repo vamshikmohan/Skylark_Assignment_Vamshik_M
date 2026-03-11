@@ -63,6 +63,45 @@ L. Project Lost
 N. Not relevant at the moment
 O. Not relevant at all
 
+--------------------------------
+CRM Vocabulary Mapping
+--------------------------------
+
+The company uses internal CRM codes.
+
+Deal Stage values include:
+
+A. Lead Generated
+B. Sales Qualified Leads
+C. Demo Done
+D. Feasibility
+E. Proposal/Commercials Sent
+F. Negotiations
+G. Project Won
+H. Work Order Received
+I. POC
+J. Invoice sent
+M. Projects On Hold
+L. Project Lost
+N. Not relevant at the moment
+O. Not Relevant at all
+
+Important meaning:
+
+I. POC = Proof of Concept stage.
+
+If the user asks about:
+
+proof of concept
+poc
+pilot project
+trial project
+
+You should search for:
+
+Deal Stage = "I. POC"
+OR
+Nature of Work = "Proof of Concept"
 
 --------------------------------
 Project Type Context
@@ -253,36 +292,21 @@ def extract_keyword(query):
 
     q = query.lower()
 
-    synonym_map = {
-        "proof of concept": "poc",
-        "poc": "poc",
-        "pilot": "poc",
-        "trial": "poc",
-        "demo": "demo",
-        "feasibility": "feasibility",
-        "negotiation": "negotiation",
-        "proposal": "proposal",
+    intent_map = {
+        "proof of concept": ["proof of concept", "poc"],
+        "poc": ["proof of concept", "poc"],
+        "pilot": ["proof of concept", "poc"],
+        "trial": ["proof of concept", "poc"],
+        "demo": ["demo", "demo done"],
+        "feasibility": ["feasibility"],
     }
 
-    for key, value in synonym_map.items():
+    for key, values in intent_map.items():
         if key in q:
-            return value
+            return values
 
-    stopwords = {
-        "what","is","the","a","an","of",
-        "show","give","summary","value",
-        "bill","billing","info","get","me"
-    }
-
-    words = q.split()
-
-    keywords = [w for w in words if w not in stopwords]
-
-    if not keywords:
-        return None
-
-    return " ".join(keywords)
-
+    return [q]
+ 
 # -----------------------------
 # Analytics Functions
 # -----------------------------
@@ -441,24 +465,24 @@ def custom_filter_query(deals, workorders, trace, keyword=None):
     if keyword is None:
         return "No keyword detected."
 
-    keyword = keyword.lower()
+    if isinstance(keyword, str):
+        keyword = [keyword]
 
-    deals_match = deals[
-        deals.astype(str).apply(
-            lambda col: col.str.lower().str.contains(keyword)
-        ).any(axis=1)
-    ]
+    keyword = [k.lower() for k in keyword]
 
-    work_match = workorders[
-        workorders.astype(str).apply(
-            lambda col: col.str.lower().str.contains(keyword)
-        ).any(axis=1)
-    ]
+    def match_row(row):
+        text = " ".join(row.astype(str)).lower()
+        return any(k in text for k in keyword)
+
+    deals_match = deals[deals.apply(match_row, axis=1)]
+
+    work_match = workorders[workorders.apply(match_row, axis=1)]
 
     return {
         "matching_deals": deals_match.head(10),
         "matching_workorders": work_match.head(10)
     }
+
 
 def deal_lookup(deals, workorders, trace, keyword):
 
