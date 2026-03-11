@@ -3,10 +3,8 @@ import pandas as pd
 import json
 import re
 import streamlit as st
-try:
-    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-except:
-    GROQ_API_KEY = "API_KEY_Put_in_streamlit_secrets_VamshikM"
+
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
 # -----------------------------
 # SYSTEM PROMPT
