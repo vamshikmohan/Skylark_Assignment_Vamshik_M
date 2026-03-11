@@ -2,8 +2,11 @@ from groq import Groq
 import pandas as pd
 import json
 import re
-
-client = Groq(api_key="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")
+import streamlit as st
+try:
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+except:
+    GROQ_API_KEY = "API_KEY_Put_in_streamlit_secrets_VamshikM"
 
 # -----------------------------
 # SYSTEM PROMPT

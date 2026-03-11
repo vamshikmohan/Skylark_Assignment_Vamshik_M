@@ -11,7 +11,8 @@ from query_Funcs import handle_query
 # CONFIG
 # -----------------------------
 
-API_KEY = "YOUR_MONDAY_API_KEY"
+API_KEY = st.secrets["MONDAY_API_KEY"]
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
 DEALS_BOARD = 5027136242
 WORKORDER_BOARD = 5027136341

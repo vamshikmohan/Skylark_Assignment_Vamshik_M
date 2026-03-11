@@ -10,8 +10,7 @@ from query_Funcs import handle_query
 # CONFIG
 # -----------------------------
 
-API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzMTU3NDIxNSwiYWFpIjoxMSwidWlkIjoxMDA4NjQ2NjMsImlhZCI6IjIwMjYtMDMtMTFUMDU6NDQ6NDQuMDMyWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MTcyMDUyLCJyZ24iOiJhcHNlMiJ9.-kxk3CgnGKYxHtwDugjBwEujPEGTRf874BF03SYNGvg"
-
+API_KEY = "API_KEY_Put_in_streamlit_secrets_VamshikM"
 DEALS_BOARD = 5027136242
 WORKORDER_BOARD = 5027136341
 
