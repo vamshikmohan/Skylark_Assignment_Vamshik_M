@@ -137,6 +137,9 @@ st.title("📊 Monday.com Business Intelligence Agent")
 
 st.write(
 """
+Author: Vamshik M
+SR No: 26511
+
 Ask questions about deals, pipeline, revenue, and work orders.
 
 Example queries:
