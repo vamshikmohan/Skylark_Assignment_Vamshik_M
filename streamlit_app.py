@@ -1,3 +1,4 @@
+import streamlit as st
 import os
 import requests
 import pandas as pd
@@ -10,7 +11,7 @@ from query_Funcs import handle_query
 # CONFIG
 # -----------------------------
 
-API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzMTU3NDIxNSwiYWFpIjoxMSwidWlkIjoxMDA4NjQ2NjMsImlhZCI6IjIwMjYtMDMtMTFUMDU6NDQ6NDQuMDMyWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MTcyMDUyLCJyZ24iOiJhcHNlMiJ9.-kxk3CgnGKYxHtwDugjBwEujPEGTRf874BF03SYNGvg"
+API_KEY = "YOUR_MONDAY_API_KEY"
 
 DEALS_BOARD = 5027136242
 WORKORDER_BOARD = 5027136341
@@ -53,20 +54,13 @@ def fetch_board(board_id, trace=None):
         "Content-Type": "application/json"
     }
 
-    try:
+    response = requests.post(
+        MONDAY_URL,
+        json={"query": query},
+        headers=headers
+    )
 
-        response = requests.post(
-            MONDAY_URL,
-            json={"query": query},
-            headers=headers
-        )
-
-        response.raise_for_status()
-
-        data = response.json()
-
-    except Exception as e:
-        raise RuntimeError(f"Monday API error: {e}")
+    data = response.json()
 
     board = data["data"]["boards"][0]
 
@@ -131,80 +125,78 @@ def load_live_data(trace):
 
 
 # -----------------------------
-# INTERACTIVE AGENT LOOP
+# STREAMLIT UI
 # -----------------------------
 
-def run_agent():
+st.set_page_config(
+    page_title="Monday BI Agent",
+    layout="wide"
+)
 
-    print("\n==============================")
-    print(" Monday.com BI Agent")
-    print("==============================")
+st.title("📊 Monday.com Business Intelligence Agent")
 
-    print("\nType 'exit' to quit")
+st.write(
+"""
+Ask questions about deals, pipeline, revenue, and work orders.
 
-    while True:
+Example queries:
+- Show pipeline value by sector
+- What is the expected pipeline value?
+- Show the top deals
+- What is the total executed revenue?
+"""
+)
 
-        query = input("\nQuestion: ")
-
-        if query.lower() == "exit":
-            print("Exiting agent.")
-            break
-
-        trace = []
-
-        try:
-
-            # --------------------------------
-            # LIVE DATA FETCH
-            # --------------------------------
-
-            deals, workorders, dq_deals, dq_workorders = load_live_data(trace)
-
-            # --------------------------------
-            # QUERY HANDLING
-            # --------------------------------
-
-            result, summary, agent_trace = handle_query(
-                query,
-                deals,
-                workorders
-            )
-
-            trace.extend(agent_trace)
-
-            # --------------------------------
-            # OUTPUT
-            # --------------------------------
-
-            print("\n=== ANALYTICS RESULT ===")
-
-            if isinstance(result, pd.DataFrame):
-                print(result.to_string(index=False))
-            else:
-                print(result)
-
-            print("\n=== EXECUTIVE SUMMARY ===")
-            print(summary)
-
-            print("\n=== DATA QUALITY ===")
-            print("Deals:", dq_deals)
-            print("Workorders:", dq_workorders)
-
-            print("\n=== AGENT TRACE ===")
-
-            for step in trace:
-                print("•", step)
-
-        except Exception as e:
-
-            print("\nAgent encountered an error:")
-            print(str(e))
+query = st.text_input("Ask a business question")
 
 
-# -----------------------------
-# MAIN ENTRY
-# -----------------------------
+if query:
 
-if __name__ == "__main__":
+    trace = []
 
-    run_agent()
+    with st.spinner("Fetching live data from monday.com..."):
+
+        deals, workorders, dq_deals, dq_workorders = load_live_data(trace)
+
+        result, summary, agent_trace = handle_query(
+            query,
+            deals,
+            workorders
+        )
+
+        trace.extend(agent_trace)
+
+    col1, col2 = st.columns([2,1])
+
+    # -----------------------------
+    # RESULTS
+    # -----------------------------
+
+    with col1:
+
+        st.subheader("Analytics Result")
+
+        if isinstance(result, pd.DataFrame):
+            st.dataframe(result)
+        else:
+            st.write(result)
+
+        st.subheader("Executive Summary")
+
+        st.write(summary)
+
+    # -----------------------------
+    # SIDE PANEL
+    # -----------------------------
+
+    with col2:
+
+        st.subheader("Data Quality")
+
+        st.write("Deals:", dq_deals)
+        st.write("Workorders:", dq_workorders)
+
+        st.subheader("Agent Trace")
+
+        for step in trace:
+            st.write("•", step)

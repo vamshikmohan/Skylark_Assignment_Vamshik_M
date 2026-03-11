@@ -48,3 +48,62 @@ def sector_performance(deals):
         )
         .sort_values("pipeline_value", ascending=False)
     )
+
+# analytics.py
+
+def total_pipeline_value(deals):
+    return deals["masked_deal_value"].sum()
+
+
+def expected_pipeline_value(deals):
+    return deals["expected_pipeline_value"].sum()
+
+
+def pipeline_by_sector(deals):
+    return deals.groupby("sector_service")["masked_deal_value"].sum()
+
+
+def pipeline_by_client(deals):
+    return deals.groupby("client_code")["masked_deal_value"].sum()
+
+
+def top_deals(deals, n=5):
+    return deals.sort_values(
+        "masked_deal_value",
+        ascending=False
+    ).head(n)
+
+
+def deals_by_status(deals):
+    return deals.groupby("deal_status").size()
+
+
+def deals_by_owner(deals):
+    return deals.groupby("owner_code").size()
+
+
+def revenue_executed(workorders):
+    return workorders[
+        "amount_in_rupees_excl_of_gst_masked"
+    ].sum()
+
+
+def revenue_by_sector(workorders):
+    return workorders.groupby("sector")[
+        "amount_in_rupees_excl_of_gst_masked"
+    ].sum()
+
+
+def workorders_status(workorders):
+    return workorders.groupby("execution_status").size()
+
+
+def billing_status_summary(workorders):
+    return workorders.groupby("billing_status").size()
+
+
+def outstanding_revenue(workorders):
+    return (
+        workorders["amount_in_rupees_excl_of_gst_masked"].sum()
+        - workorders["collected_amount_in_rupees_incl_of_gst_masked"].sum()
+    )
