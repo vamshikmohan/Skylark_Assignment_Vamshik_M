@@ -124,7 +124,6 @@ def load_live_data(trace):
 
     return deals_clean, workorders_clean, dq_deals, dq_workorders
 
-
 # -----------------------------
 # STREAMLIT UI
 # -----------------------------
@@ -148,10 +147,23 @@ Example queries:
 """
 )
 
+# -----------------------------
+# QUERY COUNTER
+# -----------------------------
+
+if "query_count" not in st.session_state:
+    st.session_state.query_count = 0
+
+
 query = st.text_input("Ask a business question")
 
 
 if query:
+
+    st.session_state.query_count += 1
+    query_number = st.session_state.query_count
+
+    st.markdown(f"### Query #{query_number}")
 
     trace = []
 
@@ -167,37 +179,35 @@ if query:
 
         trace.extend(agent_trace)
 
-    col1, col2 = st.columns([2,1])
-
     # -----------------------------
-    # RESULTS
+    # EXECUTIVE SUMMARY FIRST
     # -----------------------------
 
-    with col1:
+    st.subheader("Executive Summary")
 
-        st.subheader("Analytics Result")
-
-        if isinstance(result, pd.DataFrame):
-            st.dataframe(result)
-        else:
-            st.write(result)
-
-        st.subheader("Executive Summary")
-
-        st.write(summary)
+    st.success(summary)
 
     # -----------------------------
-    # SIDE PANEL
+    # ANALYTICS RESULT
     # -----------------------------
 
-    with col2:
+    st.subheader("Analytics Result")
 
-        st.subheader("Data Quality")
+    if isinstance(result, pd.DataFrame):
+        st.dataframe(result, use_container_width=True)
+    else:
+        st.write(result)
+
+    # -----------------------------
+    # OPTIONAL DETAILS
+    # -----------------------------
+
+    with st.expander("Data Quality Report"):
 
         st.write("Deals:", dq_deals)
         st.write("Workorders:", dq_workorders)
 
-        st.subheader("Agent Trace")
+    with st.expander("Agent Trace (Debug)"):
 
         for step in trace:
             st.write("•", step)
